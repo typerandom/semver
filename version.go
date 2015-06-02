@@ -132,7 +132,7 @@ func (v Version) Same(c Version) bool {
 	return !v.Before(c) && !v.After(c)
 }
 
-// Before determines whether or this version is a precursor to another version.
+// Before determines whether or not this version is a precursor to another version.
 func (v Version) Before(t Version) bool {
 	if v.major < t.major {
 		return true
@@ -144,7 +144,7 @@ func (v Version) Before(t Version) bool {
 	return false
 }
 
-// After determines whether or this version is a successor to another version.
+// After determines whether or not this version is a successor to another version.
 func (v Version) After(t Version) bool {
 	if v.major > t.major {
 		return true
