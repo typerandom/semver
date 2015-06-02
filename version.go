@@ -1,54 +1,98 @@
-package version
+package semver
 
 import (
 	"errors"
 	"fmt"
+	"regexp"
 	"strconv"
 	"strings"
 )
 
-// Represents a semantic Semantic
+// Represents a semantic version.
 // http://semver.org/
 
-type Semantic struct {
-	major int
-	minor int
-	patch int
+// Regex used for parsing a semantic version (2.0) as specified by http://semver.org/
+var version20Regexp = regexp.MustCompile("^(\\d+)\\.(\\d+)\\.(\\d+)(\\-(([0-9A-Za-z-]+)(\\.)?)+)?(\\+(([0-9A-Za-z-]+)(\\.)?)+)?$")
+
+// Version represents the structure of the Semantic Versioning 2.0 scheme.
+type Version struct {
+	major      int
+	minor      int
+	patch      int
+	preRelease []string
+	build      []string
 }
 
-var namedParts = []string{"major", "minor", "patch"}
+// Compare two semantic versions. This can be used for sort methods.
+func Compare(a Version, b Version) int {
+	if a.Before(b) {
+		return -1
+	} else if a.After(b) {
+		return 1
+	} else {
+		return 0
+	}
+}
 
-func Parse(version string) (*Semantic, error) {
-	parts := strings.SplitN(version, ".", 3)
-
-	if len(parts) != 3 {
-		return nil, errors.New("A semantic version must only consist of 3 parts. Major, minor and patch.")
+// Parse metadata such as pre-release and build of a version.
+func parseMetadata(metadata string) ([]string, error) {
+	if len(metadata) == 0 {
+		return []string{}, nil
 	}
 
-	var parsed [3]int
-
-	for i, part := range parts {
-		parsedPart, err := strconv.ParseInt(part, 10, 32)
-
-		if err != nil {
-			return nil, errors.New("Semantic version part '" + namedParts[i] + "' must be a valid integer.")
-		}
-
-		if parsedPart < 0 {
-			return nil, errors.New("Semantic version part '" + namedParts[i] + "' cannot be negative.")
-		}
-
-		parsed[i] = int(parsedPart)
+	if metadata[0] != '-' && metadata[0] != '+' {
+		return nil, errors.New("Invalid metadata indicator sign '" + string(metadata[0]) + "'.")
 	}
 
-	return &Semantic{
-		major: parsed[0],
-		minor: parsed[1],
-		patch: parsed[2],
+	if metadata[len(metadata)-1] == '.' {
+		return nil, errors.New("Metadata cannot end with dot.")
+	}
+
+	return strings.Split(metadata[1:], "."), nil
+}
+
+// Parse tries to parse a raw value. Returns error if it fails.
+func Parse(value string) (*Version, error) {
+	groups := version20Regexp.FindAllStringSubmatch(value, -1)
+
+	if len(groups) == 0 {
+		return nil, errors.New("Invalid version format.")
+	}
+
+	matches := groups[0]
+
+	major, _ := strconv.ParseInt(matches[1], 10, 32)
+	minor, _ := strconv.ParseInt(matches[2], 10, 32)
+	patch, _ := strconv.ParseInt(matches[3], 10, 32)
+
+	preRelease, err := parseMetadata(matches[4])
+
+	if err != nil {
+		return nil, errors.New("Invalid version format.")
+	}
+
+	build, err := parseMetadata(matches[8])
+
+	if err != nil {
+		return nil, errors.New("Invalid version format.")
+	}
+
+	// Version cannot be zero.
+	if (major + minor + patch) == 0 {
+		return nil, errors.New("Invalid version format.")
+	}
+
+	return &Version{
+		major:      int(major),
+		minor:      int(minor),
+		patch:      int(patch),
+		preRelease: preRelease,
+		build:      build,
 	}, nil
 }
 
-func New(version string) Semantic {
+// New creates a new version given a raw value. Panics if wrong format.
+func New(version string) Version {
 	result, err := Parse(version)
 
 	if err != nil {
@@ -58,45 +102,38 @@ func New(version string) Semantic {
 	return *result
 }
 
-func (v Semantic) Valid() bool {
-	return v.major > 0 || v.minor > 0 || v.patch > 0
-}
-
-func (v Semantic) Major() int {
+// Major gets the major version.
+func (v Version) Major() int {
 	return v.major
 }
 
-func (v Semantic) IncrementMajor() Semantic {
-	nv := v.Copy()
-	nv.major++
-	return nv
-}
-
-func (v Semantic) Minor() int {
+// Minor gets the minor version.
+func (v Version) Minor() int {
 	return v.minor
 }
 
-func (v Semantic) IncrementMinor() Semantic {
-	nv := v.Copy()
-	nv.minor++
-	return nv
-}
-
-func (v Semantic) Patch() int {
+// Patch gets the patch version.
+func (v Version) Patch() int {
 	return v.patch
 }
 
-func (v Semantic) IncrementPatch() Semantic {
-	nv := v.Copy()
-	nv.patch++
-	return nv
+// PreRelease gets the pre-release build metadata.
+func (v Version) PreRelease() []string {
+	return v.preRelease
 }
 
-func (v Semantic) IsSame(c Semantic) bool {
-	return !v.IsBefore(c) && !v.IsAfter(c)
+// Build gets the build metadata.
+func (v Version) Build() []string {
+	return v.build
 }
 
-func (v Semantic) IsBefore(t Semantic) bool {
+// Same determines whether or not this version is equal to another version.
+func (v Version) Same(c Version) bool {
+	return !v.Before(c) && !v.After(c)
+}
+
+// Before determines whether or this version is a precursor to another version.
+func (v Version) Before(t Version) bool {
 	if v.major < t.major {
 		return true
 	} else if v.minor < t.minor {
@@ -107,7 +144,8 @@ func (v Semantic) IsBefore(t Semantic) bool {
 	return false
 }
 
-func (v Semantic) IsAfter(t Semantic) bool {
+// After determines whether or this version is a successor to another version.
+func (v Version) After(t Version) bool {
 	if v.major > t.major {
 		return true
 	} else if v.minor > t.minor {
@@ -118,14 +156,17 @@ func (v Semantic) IsAfter(t Semantic) bool {
 	return false
 }
 
-func (v Semantic) Copy() Semantic {
-	return Semantic{
-		major: v.major,
-		minor: v.minor,
-		patch: v.patch,
-	}
-}
+// String gets the string representation of this version.
+func (v *Version) String() string {
+	result := fmt.Sprintf("%d.%d.%d", v.major, v.minor, v.patch)
 
-func (v *Semantic) String() string {
-	return fmt.Sprintf("%d.%d.%d", v.major, v.minor, v.patch)
+	if len(v.preRelease) > 0 {
+		result += "-" + strings.Join(v.preRelease, ".")
+	}
+
+	if len(v.build) > 0 {
+		result += "+" + strings.Join(v.build, ".")
+	}
+
+	return result
 }
