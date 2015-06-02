@@ -23,17 +23,6 @@ type Version struct {
 	build      []string
 }
 
-// Compare two semantic versions. This can be used for sort methods.
-func Compare(a Version, b Version) int {
-	if a.Before(b) {
-		return -1
-	} else if a.After(b) {
-		return 1
-	} else {
-		return 0
-	}
-}
-
 // Parse metadata such as pre-release and build of a version.
 func parseMetadata(metadata string) ([]string, error) {
 	if len(metadata) == 0 {
