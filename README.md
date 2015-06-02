@@ -1,6 +1,6 @@
 # semver [![GoDoc](https://godoc.org/github.com/typerandom/semver?status.png)](http://godoc.org/github.com/typerandom/semver) [![Build Status](https://travis-ci.org/typerandom/semver.svg?branch=master)](https://travis-ci.org/typerandom/semver)
 
-Semantic versioning for Go.
+Semantic versioning (http://semver.org/) for Go.
 
 ## Install
 
