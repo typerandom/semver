@@ -11,11 +11,23 @@ import (
 // Represents a semantic version.
 // http://semver.org/
 
+type Version interface {
+	Major() int
+	Minor() int
+	Patch() int
+	PreRelease() []string
+	Build() []string
+	Same(v Version) bool
+	After(v Version) bool
+	Before(v Version) bool
+	String() string
+}
+
 // Regex used for parsing a semantic version (2.0) as specified by http://semver.org/
 var version20Regexp = regexp.MustCompile("^(\\d+)\\.(\\d+)\\.(\\d+)(\\-(([0-9A-Za-z-]+)(\\.)?)+)?(\\+(([0-9A-Za-z-]+)(\\.)?)+)?$")
 
 // Version represents the structure of the Semantic Versioning 2.0 scheme.
-type Version struct {
+type version20 struct {
 	major      int
 	minor      int
 	patch      int
@@ -41,7 +53,7 @@ func parseMetadata(metadata string) ([]string, error) {
 }
 
 // Parse tries to parse a raw value. Returns error if it fails.
-func Parse(value string) (*Version, error) {
+func Parse(value string) (Version, error) {
 	groups := version20Regexp.FindAllStringSubmatch(value, -1)
 
 	if len(groups) == 0 {
@@ -71,7 +83,7 @@ func Parse(value string) (*Version, error) {
 		return nil, errors.New("Invalid version format.")
 	}
 
-	return &Version{
+	return &version20{
 		major:      int(major),
 		minor:      int(minor),
 		patch:      int(patch),
@@ -88,65 +100,113 @@ func New(version string) Version {
 		panic(err.Error())
 	}
 
-	return *result
+	return result
 }
 
 // Major gets the major version.
-func (v Version) Major() int {
+func (v *version20) Major() int {
 	return v.major
 }
 
 // Minor gets the minor version.
-func (v Version) Minor() int {
+func (v *version20) Minor() int {
 	return v.minor
 }
 
 // Patch gets the patch version.
-func (v Version) Patch() int {
+func (v *version20) Patch() int {
 	return v.patch
 }
 
 // PreRelease gets the pre-release build metadata.
-func (v Version) PreRelease() []string {
+func (v *version20) PreRelease() []string {
 	return v.preRelease
 }
 
 // Build gets the build metadata.
-func (v Version) Build() []string {
+func (v *version20) Build() []string {
 	return v.build
 }
 
-// Same determines whether or not this version is equal to another version.
-func (v Version) Same(c Version) bool {
-	return !v.Before(c) && !v.After(c)
+// Compares pre-releases from one version with pre-releases of another.
+func comparePreReleases(a []string, b []string) int {
+	lenA := len(a)
+	lenB := len(b)
+
+	if lenA == 0 && lenB == 0 {
+		return 0
+	} else if lenA == 0 {
+		return 1
+	} else if lenB == 0 {
+		return -1
+	}
+
+	lim := lenA
+
+	if lenB < lenA {
+		lim = lenB
+	}
+
+	for i := 0; i < lim; i++ {
+		preA := a[i]
+		preB := b[i]
+		if preA == preB {
+			continue
+		} else if preA > preB {
+			return 1
+		} else { // preA < preB
+			return -1
+		}
+	}
+
+	if lenA > lenB {
+		return 1
+	}
+
+	return 0
+}
+
+// Compares two versions and returns an int indicating the relation of A to B.
+// The result will be 0 if a==b, -1 if a < b, and +1 if a > b.
+func compareVersions(a Version, b Version) int {
+	if a.Major() < b.Major() {
+		return -1
+	} else if a.Major() > b.Major() {
+		return 1
+	}
+
+	if a.Minor() < b.Minor() {
+		return -1
+	} else if a.Minor() > b.Minor() {
+		return 1
+	}
+
+	if a.Patch() < b.Patch() {
+		return -1
+	} else if a.Patch() > b.Patch() {
+		return 1
+	}
+
+	return comparePreReleases(a.PreRelease(), b.PreRelease())
+}
+
+// Same determines whether or not this version is equal to another version. Note: build metadata may differ.
+func (v *version20) Same(t Version) bool {
+	return compareVersions(v, t) == 0
 }
 
 // Before determines whether or not this version is a precursor to another version.
-func (v Version) Before(t Version) bool {
-	if v.major < t.major {
-		return true
-	} else if v.minor < t.minor {
-		return true
-	} else if v.patch < t.patch {
-		return true
-	}
-	return false
+func (v *version20) Before(t Version) bool {
+	return compareVersions(v, t) < 0
 }
 
 // After determines whether or not this version is a successor to another version.
-func (v Version) After(t Version) bool {
-	if v.major > t.major {
-		return true
-	} else if v.minor > t.minor {
-		return true
-	} else if v.patch > t.patch {
-		return true
-	}
-	return false
+func (v *version20) After(t Version) bool {
+	return compareVersions(v, t) > 0
 }
 
 // String gets the string representation of this version.
-func (v *Version) String() string {
+func (v *version20) String() string {
 	result := fmt.Sprintf("%d.%d.%d", v.major, v.minor, v.patch)
 
 	if len(v.preRelease) > 0 {

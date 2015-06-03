@@ -77,6 +77,7 @@ func TestThatVariousValidVersionsAreValid(t *testing.T) {
 	assertThatVersionIsValid(t, "0.0.1", 0, 0, 1, []string{}, []string{})
 	assertThatVersionIsValid(t, "1.0.0-beta+exp.sha.5114f85", 1, 0, 0, []string{"beta"}, []string{"exp", "sha", "5114f85"})
 }
+
 func TestThatVariousInvalidVersionsAreInvalid(t *testing.T) {
 	assertThatInvalidVersionIsInvalid(t, "")
 	assertThatInvalidVersionIsInvalid(t, "0.0.0")
@@ -85,4 +86,47 @@ func TestThatVariousInvalidVersionsAreInvalid(t *testing.T) {
 	assertThatInvalidVersionIsInvalid(t, "-1.0.0")
 	assertThatInvalidVersionIsInvalid(t, "1.0.0.0")
 	assertThatInvalidVersionIsInvalid(t, "...")
+}
+
+func assertVersionIsBefore(t *testing.T, before string, after string) {
+	if !semver.New(before).Before(semver.New(after)) {
+		t.Errorf("Expected version '%s' to be before '%s', but it wasn't.", before, after)
+	}
+}
+
+func TestThatWhenComparingVersionsBeforeVersionIsActuallyBefore(t *testing.T) {
+	assertVersionIsBefore(t, "0.9.0", "1.0.0")
+	assertVersionIsBefore(t, "1.0.0-alpha", "1.0.0")
+	assertVersionIsBefore(t, "1.0.0-alpha", "1.0.0-beta")
+	assertVersionIsBefore(t, "1.0.0-alpha.1", "1.0.0-alpha.2")
+}
+
+func assertVersionIsAfter(t *testing.T, after string, before string) {
+	if !semver.New(before).Before(semver.New(after)) {
+		t.Errorf("Expected version '%s' to be after '%s', but it wasn't.", after, before)
+	}
+}
+
+func TestThatWhenComparingVersionsAfterVersionIsActuallyAfter(t *testing.T) {
+	assertVersionIsAfter(t, "1.0.0", "0.9.0")
+	assertVersionIsAfter(t, "1.0.0", "1.0.0-alpha")
+	assertVersionIsAfter(t, "1.0.0-beta", "1.0.0-alpha")
+	assertVersionIsAfter(t, "1.0.0-alpha.2", "1.0.0-alpha.1")
+}
+
+func assertVersionIsSame(t *testing.T, a string, b string) {
+	if !semver.New(a).Same(semver.New(b)) {
+		t.Errorf("Expected version '%s' to be same as '%s', but it wasn't.", a, b)
+	}
+}
+
+func TestThatWhenComparingSameVersionsVersionIsActuallySame(t *testing.T) {
+	assertVersionIsSame(t, "1.0.0", "1.0.0")
+	assertVersionIsSame(t, "1.0.0-alpha", "1.0.0-alpha")
+	assertVersionIsSame(t, "1.0.0-alpha.1", "1.0.0-alpha.1")
+	assertVersionIsSame(t, "1.0.0-alpha.1.2", "1.0.0-alpha.1.2")
+	assertVersionIsSame(t, "1.0.0+test", "1.0.0+test")
+	assertVersionIsSame(t, "1.0.0+123", "1.0.0+456")
+	assertVersionIsSame(t, "1.0.0-beta+123", "1.0.0-beta+456")
+	assertVersionIsSame(t, "1.2.3-beta+123", "1.2.3-beta+456")
 }
