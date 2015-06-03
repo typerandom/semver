@@ -22,7 +22,7 @@ type Version interface {
 	// Patch gets the patch version.
 	Patch() int
 
-	// PreRelease gets the pre-release build metadata.
+	// PreRelease gets the pre-release metadata.
 	PreRelease() []string
 
 	// Build gets the build metadata.
