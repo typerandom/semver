@@ -6,12 +6,12 @@ Semantic versioning (http://semver.org/) for Go.
 
 Just use go get.
 
-    go get gopkg.in/typerandom/semver.v0
+    go get gopkg.in/typerandom/semver.v1
     
 And then just import the package into your own code.
 
     import (
-        "gopkg.in/typerandom/semver.v0"
+        "gopkg.in/typerandom/semver.v1"
     )
 
 ## Getting started
@@ -21,7 +21,7 @@ package main
 
 import (
 	"fmt"
-	"gopkg.in/typerandom/semver.v0"
+	"gopkg.in/typerandom/semver.v1"
 )
 
 func main() {
