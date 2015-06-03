@@ -30,10 +30,6 @@ func main() {
 }
 ```
 
-## Not supported yet
-
-* Precendence for pre-release version identifiers (spec #11).
-
 ## Documentation
 
 For full documentation [see GoDoc](https://godoc.org/github.com/typerandom/semver).
