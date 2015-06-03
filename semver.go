@@ -11,15 +11,33 @@ import (
 // Represents a semantic version.
 // http://semver.org/
 
+// Version represents a Semantic Version.
 type Version interface {
+	// Major gets the major version.
 	Major() int
+
+	// Minor gets the minor version.
 	Minor() int
+
+	// Patch gets the patch version.
 	Patch() int
+
+	// PreRelease gets the pre-release build metadata.
 	PreRelease() []string
+
+	// Build gets the build metadata.
 	Build() []string
+
+	// Same determines whether or not this version is equal to another version. Note: build metadata may differ.
 	Same(v Version) bool
-	After(v Version) bool
+
+	// Before determines whether or not this version is a precursor to another version.
 	Before(v Version) bool
+
+	// After determines whether or not this version is a successor to another version.
+	After(v Version) bool
+
+	// String gets the string representation of this version.
 	String() string
 }
 
@@ -103,27 +121,22 @@ func New(version string) Version {
 	return result
 }
 
-// Major gets the major version.
 func (v *version20) Major() int {
 	return v.major
 }
 
-// Minor gets the minor version.
 func (v *version20) Minor() int {
 	return v.minor
 }
 
-// Patch gets the patch version.
 func (v *version20) Patch() int {
 	return v.patch
 }
 
-// PreRelease gets the pre-release build metadata.
 func (v *version20) PreRelease() []string {
 	return v.preRelease
 }
 
-// Build gets the build metadata.
 func (v *version20) Build() []string {
 	return v.build
 }
@@ -190,22 +203,18 @@ func compareVersions(a Version, b Version) int {
 	return comparePreReleases(a.PreRelease(), b.PreRelease())
 }
 
-// Same determines whether or not this version is equal to another version. Note: build metadata may differ.
 func (v *version20) Same(t Version) bool {
 	return compareVersions(v, t) == 0
 }
 
-// Before determines whether or not this version is a precursor to another version.
 func (v *version20) Before(t Version) bool {
 	return compareVersions(v, t) < 0
 }
 
-// After determines whether or not this version is a successor to another version.
 func (v *version20) After(t Version) bool {
 	return compareVersions(v, t) > 0
 }
 
-// String gets the string representation of this version.
 func (v *version20) String() string {
 	result := fmt.Sprintf("%d.%d.%d", v.major, v.minor, v.patch)
 
